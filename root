@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Silent Multi-View Loop</title>
+
+<style>
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #0b0e14;
+    color: white;
+    margin: 0;
+}
+
+/* Header */
+.header {
+    background: #1a1d23;
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    border-bottom: 2px solid #ff4444;
+}
+.title-info { flex-grow: 1; }
+.title-info h2 { margin: 0; font-size: 18px; }
+.timer-text { margin: 0; font-size: 13px; color: #ff4444; font-weight: bold; }
+
+/* Controls */
+.controls {
+    padding: 20px;
+    background: #1a1d23;
+    text-align: center;
+}
+input {
+    padding: 12px;
+    margin: 5px;
+    background: #000;
+    color: #00ffcc;
+    border: 1px solid #333;
+    border-radius: 8px;
+}
+button {
+    padding: 12px 25px;
+    background: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+button:hover { background: #cc0000; }
+
+/* Grid */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 10px;
+}
+.video-card {
+    background: black;
+    border-radius: 8px;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    position: relative;
+}
+.video-label {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    font-size: 10px;
+    background: rgba(255,0,0,0.7);
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    <div class="title-info">
+        <h2 id="status-text">System Idle</h2>
+        <p id="timer-display" class="timer-text">Waiting...</p>
+    </div>
+    <div id="status-dot">🔴</div>
+</div>
+
+<div class="controls">
+    <input id="videoUrl" placeholder="Paste YouTube link">
+    <input id="loopTime" type="number" value="30" min="5" max="300">
+    <br>
+    <button onclick="startEngine()">🚀 Start Silent Loop</button>
+    <p style="font-size:11px;color:#777">Reload interval (seconds)</p>
+</div>
+
+<div class="grid-container" id="videoGrid"></div>
+
+<script>
+let reloadInterval;
+let countdownInterval;
+let timeLeft = 30;
+let embedUrl = "";
+
+function extractVideoId(url) {
+    const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+    return match ? match[1] : null;
+}
+
+function startEngine() {
+    const input = document.getElementById("videoUrl").value.trim();
+    if (!input) return alert("Enter a YouTube link");
+
+    const videoId = extractVideoId(input);
+    if (!videoId) return alert("Invalid YouTube URL");
+
+    embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=1`;
+
+    clearInterval(reloadInterval);
+    clearInterval(countdownInterval);
+
+    document.getElementById("status-text").innerText = "Silent Views Running";
+    document.getElementById("status-dot").innerText = "🟢";
+
+    const grid = document.getElementById("videoGrid");
+    grid.innerHTML = "";
+
+    for (let i = 1; i <= 20; i++) {
+        const card = document.createElement("div");
+        card.className = "video-card";
+        card.innerHTML = `
+            <div class="video-label">VIEW ${i}</div>
+            <iframe src="${embedUrl}" allow="autoplay; encrypted-media"></iframe>
+        `;
+        grid.appendChild(card);
+    }
+
+    startLoop();
+}
+
+function startLoop() {
+    clearInterval(reloadInterval);
+    clearInterval(countdownInterval);
+
+    const loopSeconds = parseInt(document.getElementById("loopTime").value) || 30;
+    timeLeft = loopSeconds;
+    updateTimer();
+
+    countdownInterval = setInterval(() => {
+        timeLeft--;
+        updateTimer();
+        if (timeLeft <= 0) timeLeft = loopSeconds;
+    }, 1000);
+
+    reloadInterval = setInterval(() => {
+        reloadIframes();
+        timeLeft = loopSeconds;
+    }, loopSeconds * 1000);
+}
+
+function updateTimer() {
+    document.getElementById("timer-display").innerText =
+        `Reloading in ${timeLeft}s`;
+}
+
+function reloadIframes() {
+    const stamp = Date.now(); // soft reload (low CPU)
+    document.querySelectorAll("iframe").forEach(frame => {
+        frame.src = embedUrl + "&t=" + stamp;
+    });
+}
+</script>
+
+</body>
+</html>
